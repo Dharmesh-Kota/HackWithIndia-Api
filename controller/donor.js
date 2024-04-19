@@ -101,7 +101,6 @@ export const reward_store = async (req, res) => {
                 let rewards = await Agency.findOne({ user: agency.agency }, { reward: 1 });
                 rewards = rewards.reward;
                 let { username, name } = await User.findOne({ username: agency.agency }, {username: 1, name: 1});
-                console.log(username, name, agency.points, rewards);
                 userRewards.push({ username: username, name: name, rewards: rewards, userPoints: agency.points });
             }
             return res.status(200).json({ message: 'Agency data fetched!', userRewards: userRewards});
@@ -117,21 +116,28 @@ export const reward_store = async (req, res) => {
 // Reedem the reward and subtract the money
 export const reedem_reward = async (req, res) => {
     try {
-        const { reward } = req.body;
+        const { rewards } = req.body;
         let sender = await User.findOne({ username: req.body.username });
         await History.create({
             sender: req.body.username,
             receiver: req.user.username,
-            reward: reward
+            reward: rewards
         });
-    
+        
         await Points.findOneAndUpdate(
-            { user: req.body.user.id, "reward.agency": sender.id },
-            { $set: { "reward.$.points": -reward.point } },
-            { new: true }
-          );
+            { 
+                user: req.user.username,
+            },
+            { 
+                $inc: { "availablePoints.$[elem].points": -rewards.point },
+            },
+            { 
+                new: true,
+                arrayFilters: [{ "elem.agency": req.body.username }],
+            }
+        );        
 
-        redeemReward(sender, req.user, reward);
+        redeemReward(sender, req.user, rewards);
           
         return res.status(200).json({ message: "Points updated successfully!" });
 

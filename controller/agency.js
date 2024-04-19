@@ -27,13 +27,17 @@ export const cofirm_supplies = async (req, res) => {
           await Points.findOneAndUpdate(
             { user: req.body.sender },
             { 
-                $set: { user: req.body.sender }, // Set user
-                $setOnInsert: { "availablePoints.agency": req.user.username }, // Set agency if the document is inserted
-                $inc: { "availablePoints.points": req.body.quantity * 10 } // Increment points for specific agency
+                $set: { user: req.body.sender }, 
+                $addToSet: { 
+                    availablePoints: { 
+                        agency: req.user.username,
+                        points: req.body.quantity * 10
+                    } 
+                } 
             },
             { 
-                upsert: true, // Create new document if not found
-                new: true // Return updated document
+                upsert: true, 
+                new: true 
             }
         );
         
@@ -65,7 +69,8 @@ export const reject_supplies = async (req, res) => {
 // Get the history of rewards redeemed by different users
 export const history = async (req, res) => {
     try {
-        let history = await History.findOne({ sender: req.user.username });
+        let history = await History.find({ sender: req.user.username }, {receiver: 1, reward: 1, createdAt: 1});
+        console.log(history);
         if (history) {
             return res.status(200).json({ message: 'Redeem history sent!', history: history });
         }
